@@ -2,6 +2,8 @@
 
 module.exports = {
 
+    // OpenSpec (limitar-longitud-mensajes): longitud maxima permitida para un mensaje
+    MAX_LONGITUD_MENSAJE: 500,
 
     // logica que valida si un telefono esta correcto...
     is_valid_phone: function (phone) {
@@ -128,7 +130,12 @@ module.exports = {
           color: this.sanitizeColor(obj && obj.color)
         };
 
-        if (this.is_script_injection(mensaje)) {
+        if (mensaje.length > this.MAX_LONGITUD_MENSAJE) {
+          // OpenSpec (limitar-longitud-mensajes): se rechazan los mensajes demasiado largos
+          console.log("Mensaje demasiado largo!");
+          limpio.mensaje = 'Mensaje demasiado largo: maximo ' + this.MAX_LONGITUD_MENSAJE + ' caracteres';
+        }
+        else if (this.is_script_injection(mensaje)) {
           // Lab 5: se detecta el intento de inyeccion y se bloquea el mensaje
           console.log("Inyeccion de script bloqueada!");
           limpio.mensaje = 'Mensaje bloqueado: contenido no permitido';

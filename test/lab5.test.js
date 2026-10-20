@@ -127,3 +127,24 @@ describe('Lab 5 - Prevencion de inyeccion de scripts', function () {
   });
 
 });
+
+describe('OpenSpec - Limite de longitud de mensajes', function () {
+
+  it('acepta un mensaje de exactamente 500 caracteres', function () {
+    var texto = 'a'.repeat(500);
+    var r = enviar(texto);
+    assert.strictEqual(r.mensaje, texto);
+  });
+
+  it('rechaza un mensaje de 501 caracteres', function () {
+    var r = enviar('a'.repeat(501));
+    assert.strictEqual(r.mensaje, 'Mensaje demasiado largo: maximo 500 caracteres');
+  });
+
+  it('rechaza un script largo por longitud sin devolver la etiqueta <script>', function () {
+    var r = enviar('<script>alert(1)</script>' + 'a'.repeat(600));
+    assert.strictEqual(r.mensaje, 'Mensaje demasiado largo: maximo 500 caracteres');
+    assert.strictEqual(r.mensaje.indexOf('<script'), -1);
+  });
+
+});
