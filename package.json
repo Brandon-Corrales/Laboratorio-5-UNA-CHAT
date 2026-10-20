@@ -9,6 +9,8 @@
     "test": "mocha"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
     "jest": "^30.5.2",
     "socket.io-client": "^4.8.4",
     "supertest": "^7.3.1"
