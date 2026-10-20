@@ -24,6 +24,12 @@ io.on('connection', function(socket){
   });
 });
 
-http.listen(port, function(){
-  console.log('listening on *:' + port);
-});
+// Lab 5: el servidor solo se inicia si se ejecuta directamente (npm start).
+// Cuando lo importan las pruebas de integracion, la prueba lo inicia y lo cierra.
+if (require.main === module) {
+  http.listen(port, function(){
+    console.log('listening on *:' + port);
+  });
+}
+
+module.exports = { app: app, http: http, io: io };
