@@ -8,7 +8,46 @@ permissions:
   contents: read
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v5
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Pruebas unitarias (Mocha)
+        run: npm test
+
+      - name: Pruebas de integracion (Jest)
+        run: npm run test:integration
+
+      - name: Instalar Chromium para Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Iniciar el chat para las pruebas end-to-end
+        run: |
+          nohup npm start > servidor.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl --silent --output /dev/null http://localhost:3000 && exit 0
+            sleep 1
+          done
+          echo "El chat no inicio a tiempo"
+          cat servidor.log
+          exit 1
+
+      - name: Pruebas end-to-end (Playwright)
+        run: npm run test:e2e
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Solicitar despliegue
