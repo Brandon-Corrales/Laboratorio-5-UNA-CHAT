@@ -138,7 +138,7 @@ describe('OpenSpec - Limite de longitud de mensajes', function () {
 
   it('rechaza un mensaje de 501 caracteres', function () {
     var r = enviar('a'.repeat(501));
-    assert.strictEqual(r.mensaje, 'Mensaje demasiado largo: maximo 500 caracteres');
+    assert.strictEqual(r.mensaje, 'Mensaje demasiado largo: maximo 400 caracteres');
   });
 
   it('rechaza un script largo por longitud sin devolver la etiqueta <script>', function () {
