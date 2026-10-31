@@ -1,0 +1,15 @@
+# Lab 7 - Parte 3: UNA Chat en Docker con telemetria hacia Grafana Cloud
+services:
+  una-chat:
+    build: .
+    image: una-chat:lab7
+    container_name: una-chat
+    ports:
+      - "3000:3000"
+    # Las variables OTEL_* (endpoint y credencial de Grafana) se leen del .env local
+    # al iniciar el contenedor. El .env no se copia a la imagen ni se sube a GitHub.
+    env_file:
+      - .env
+    environment:
+      PORT: "3000"
+    restart: unless-stopped
