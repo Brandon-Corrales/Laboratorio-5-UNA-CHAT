@@ -1,3 +1,5 @@
+// Lab 7: Sentry se carga antes que Express para poder instrumentarlo.
+var Sentry = require('./instrument');
 
 // npm install para descargar los paquetes...
 
@@ -11,6 +13,15 @@ var port = process.env.PORT || 3000;
 // root: presentar html
 app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');
+});
+
+// Lab 7 - Parte 1.2 (TEMPORAL): genera un error controlado para verificar Sentry.
+// Se retira al terminar la prueba.
+app.get('/debug-sentry', async function(req, res){
+  var error = new Error('Error controlado de prueba para Sentry - Laboratorio 7');
+  Sentry.captureException(error);
+  await Sentry.flush(2000);
+  res.status(500).send('Error controlado enviado a Sentry');
 });
 
 // escuchar una conexion por socket
