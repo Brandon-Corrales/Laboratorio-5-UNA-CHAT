@@ -1,0 +1,26 @@
+# Lab 7 - Parte 3.2: prueba de carga local de UNA Chat ejecutandose en Docker
+# Destino: el contenedor local (localhost y el puerto publicado 3000). No se usa Vercel.
+# El endpoint que procesa los mensajes es el evento de Socket.IO "Evento-Mensaje-Server".
+# El chat no requiere autenticacion.
+config:
+  target: "http://localhost:3000"
+  socketio:
+    transports: ["websocket"]
+  phases:
+    - name: "Carga 5 solicitudes por segundo durante 60 segundos"
+      duration: 60
+      arrivalRate: 5
+
+scenarios:
+  - name: "Enviar un mensaje al chat"
+    engine: socketio
+    # Una sola solicitud por usuario virtual: sin bucles ni pausas previas
+    flow:
+      - emit:
+          channel: "Evento-Mensaje-Server"
+          data: '{"nombre":"Artillery","mensaje":"Prueba de carga {{ $uuid }}","color":"#3366CC"}'
+        # Se espera el reenvio del propio mensaje (identificado por su $uuid unico)
+        # para medir el tiempo real de respuesta del chat
+        response:
+          on: "Evento-Mensaje-Server"
+          data: "{{ $uuid }}"
