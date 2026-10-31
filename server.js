@@ -32,4 +32,9 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app: app, http: http, io: io };
+// Lab 7: Vercel usa la exportacion por defecto (el servidor HTTP con Socket.IO).
+// Se conservan app, http e io para las pruebas de integracion.
+module.exports = http;
+module.exports.app = app;
+module.exports.http = http;
+module.exports.io = io;
