@@ -8,7 +8,11 @@ var telemetria = require('./telemetria');
 
 // libreriuas
 var validation = require('./libs/unalib');
+// Lab 8: login con Auth0; el Client Secret se lee desde Supabase Vault al arrancar.
+var authGate = require('./server/auth');
+var vault = require('./server/vault');
 var app = require('express')();
+app.set('trust proxy', 1);
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var port = process.env.PORT || 3000;
@@ -16,6 +20,54 @@ var port = process.env.PORT || 3000;
 // root: presentar html
 app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');
+});
+
+// Lab 8: rutas de inicio de sesion. Sin AUTH0_DOMAIN y AUTH0_CLIENT_ID el chat queda abierto
+// (asi corren las pruebas del pipeline y el despliegue de Vercel).
+app.get('/auth/config', function(req, res){
+  var settings = authGate.authSettings();
+  if (!settings) {
+    res.json({ enabled: false });
+    return;
+  }
+  res.json({ enabled: true, domain: settings.domain, clientId: settings.clientId });
+});
+
+app.get('/auth/login', function(req, res){
+  if (!authGate.authSettings()) {
+    res.status(404).json({ error: 'Login is disabled.' });
+    return;
+  }
+  authGate.beginLogin(req, res);
+});
+
+app.get('/auth/callback', function(req, res){
+  if (!authGate.authSettings()) {
+    res.redirect('/');
+    return;
+  }
+  authGate.finishLogin(req, res);
+});
+
+app.get('/auth/logout', function(req, res){
+  authGate.logout(req, res);
+});
+
+app.get('/sala', function(req, res){
+  if (!authGate.authSettings()) {
+    res.json({ enabled: false });
+    return;
+  }
+  authGate.readSession(req, res);
+});
+
+// Lab 8: con Auth0 activo, solo se conectan al chat los sockets con una sesion valida.
+io.use(function(socket, next){
+  if (!authGate.authSettings()) {
+    next();
+    return;
+  }
+  authGate.authorizeSocket(socket, next);
 });
 
 // Lab 7 - Parte 2: fallo controlado para la prueba de monitoreo.
@@ -38,6 +90,11 @@ io.on('connection', function(socket){
       try {
         if (esFalloControlado(msg)) {
           throw new Error('Fallo controlado de prueba - Laboratorio 7');
+        }
+
+        // Lab 8: con sesion iniciada, el nombre del mensaje es el del usuario de Auth0.
+        if (socket.data && socket.data.user && socket.data.user.name) {
+          msg = authGate.stampSender(msg, socket.data.user.name);
         }
 
         var validado = telemetria.tracer.startActiveSpan('unalib.validateMessage', function(s){
@@ -77,12 +134,33 @@ io.on('connection', function(socket){
   });
 });
 
+// Lab 8: antes de abrir el puerto se lee el Client Secret desde Supabase Vault
+// y se comprueba contra Auth0. Si falla, el servidor no arranca.
+function boot() {
+  if (!authGate.authSettings()) return Promise.resolve();
+  if (process.env.AUTH0_CLIENT_SECRET) {
+    console.warn('AUTH0_CLIENT_SECRET is set and is ignored. The client secret is loaded from Supabase Vault.');
+  }
+  return vault.loadAuth0ClientSecret().then(function(secret){
+    return authGate.initAuth0(secret).catch(function(err){
+      var message = err && err.message ? String(err.message) : '';
+      if (message.indexOf('Auth0 ') === 0 && message.length < 120) throw new Error(message);
+      throw new Error(vault.redact(message, secret));
+    });
+  });
+}
+
 // Lab 5: el servidor solo se inicia si se ejecuta directamente (npm start).
 // Cuando lo importan las pruebas de integracion, la prueba lo inicia y lo cierra.
 if (require.main === module) {
-  http.listen(port, function(){
-    console.log('listening on *:' + port);
-    telemetria.log('INFO', 'UNA Chat iniciado en el puerto ' + port, { 'server.port': Number(port) });
+  boot().then(function(){
+    http.listen(port, function(){
+      console.log('listening on *:' + port);
+      telemetria.log('INFO', 'UNA Chat iniciado en el puerto ' + port, { 'server.port': Number(port) });
+    });
+  }).catch(function(err){
+    console.error(err && err.message ? err.message : 'Auth0 startup failed.');
+    process.exit(1);
   });
 }
 
